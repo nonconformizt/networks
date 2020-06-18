@@ -48,7 +48,6 @@ void handle_connection(int newsock_fd)
     fprintf(stdout, "====> Response: %s\n", response);
 
     send(newsock_fd, response, resp_length, 0);
-    // send_string(newsock_fd, response);
 
 }
 
