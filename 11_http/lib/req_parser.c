@@ -6,13 +6,14 @@
 #include <string.h>
 #include "./headers.h"
 #include "./response.c"
-#include "./str_utils.c"
 
 
 void handle_connection(int newsock_fd);
 struct Request * parse_request(char * request);
 void parse_first_str(struct Request * req, char * str);
 void print_request(struct Request * req);
+void fatal_err(const char * msg);
+
 
 
 void handle_connection(int newsock_fd)
@@ -22,7 +23,6 @@ void handle_connection(int newsock_fd)
     char *req_copy, *response;
     int n, resp_length;
 
-    // TODO: read as many times as needed to read all (while read != 0)
     n = read(newsock_fd, req_str, BUF_SIZE-1);
     if (n < 0) 
     {
@@ -39,13 +39,10 @@ void handle_connection(int newsock_fd)
     strcpy(req_copy, req_str);
 
     request = parse_request(req_copy);
-    print_request(request);
-
 
     response = prepare_response(request, &resp_length);
 
-    // fprintf(stdout, "Requested resourse: %s\n", request->path);
-    fprintf(stdout, "====> Response: %s\n", response);
+    fprintf(stdout, "Requested url: %s\n", request->path);
 
     send(newsock_fd, response, resp_length, 0);
 
@@ -56,24 +53,25 @@ struct Request * parse_request(char * req_str)
 {
     struct Request * req = malloc(sizeof(struct Request));
 
-    // char *str = strtok(req_str, "\r\n");
-    // if (str == NULL) // assume request as one string 
-    // {
+    char *str = strtok(req_str, "\r\n");
+    if (str == NULL) // assume request is one string 
+    {
         parse_first_str(req, req_str);
-    // }
-    // else 
-    // {
-    //     int counter = 0;
-    //     while (str != NULL)
-    //     {
-    //         if (counter == 0)
-    //             parse_first_str(&req, str);
+    }
+    else 
+    {
+        int counter = 0;
+        while (str != NULL)
+        {
+            if (counter == 0)
+                parse_first_str(req, str);
+            else 
+                ; // TODO: parsing headers and request body
 
-    //         printf("%s\n", str);
-    //         str = strtok(NULL, "\r\n");
-    //         counter++;
-    //     }
-    // }
+            str = strtok(NULL, "\r\n");
+            counter++;
+        }
+    }
 
     return req;
 }
@@ -83,8 +81,6 @@ void parse_first_str(struct Request * req, char * req_str)
 {
     int pathlen;
     char * path;
-
-    printf("Parsing first string... %s\n", req_str);
 
     char * str = strtok(req_str, " ");
 
@@ -163,4 +159,10 @@ void print_request(struct Request * req)
 {
     if (req != NULL)
         printf("Request: \nVersion = %d\nMethod = %d\nPath = %s\nErr = %d \n", req->httpver, req->method, req->path, req->errno);
+}
+
+void fatal_err(const char * msg)
+{
+    fprintf(stderr, "[Error]: %s\n", msg);
+    exit(1);
 }

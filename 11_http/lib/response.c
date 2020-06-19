@@ -142,9 +142,8 @@ char * get_date_h()
     info = gmtime(&rawtime);
 
     char * header = malloc(BUF_SIZE);
-
     strftime(header, BUF_SIZE, "Date: %a, %d %b %Y %H:%M:%S GMT", info);
-    fprintf(stdout, "%s\n", header);
+
     return header;
 }
 
