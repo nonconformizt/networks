@@ -6,7 +6,7 @@ void scan_host(struct in_addr target, int port_lo, int port_hi, int socket_fd);
 void * listen_host(void *target);
 void fatal_err(const char * msg);
 int parse_cidr(const char* cidr, struct in_addr* addr, struct in_addr* mask);
-void parse_args(int argc, char *argv[], struct in_addr *addr, struct in_addr *mask, int *port_lo, int *port_hi);
+void parse_args(int argc, char *argv[], struct in_addr *addr, int *port_lo, int *port_hi, int * num_hosts);
 void process_packet(unsigned char * buffer, int size, struct in_addr source_ip, struct in_addr dest_ip);
 const char* dotted_quad(const struct in_addr* addr);
 void prepare_datagram(char* datagram, struct iphdr* iph, struct tcphdr* tcph, struct in_addr dest_ip);
@@ -131,14 +131,43 @@ int parse_cidr(const char* cidr, struct in_addr* addr, struct in_addr* mask)
  */
 void parse_args(
     int argc, char * argv[], 
-    struct in_addr *addr, struct in_addr *mask, 
-    int *port_lo, int *port_hi)
+    struct in_addr *addr, 
+    int *port_lo, int *port_hi,
+    int * num_hosts)
 {
+
     if (argc <= 1)
         fatal_err("Too few arguments!");
     
-    if (parse_cidr(argv[1], addr, mask) < 0)
+    struct in_addr parsed_addr, mask, 
+                   wildcard_addr, network_addr, 
+                   broadcast_addr, min_addr, max_addr;
+
+    if (parse_cidr(argv[1], &parsed_addr, &mask) < 0)
         fatal_err("Invalid target address!");
+    // make some weird stuff i don't understand
+    {
+        wildcard_addr = mask;
+        wildcard_addr.s_addr = ~wildcard_addr.s_addr;
+
+        network_addr = parsed_addr;
+        network_addr.s_addr &= mask.s_addr;
+
+        broadcast_addr = parsed_addr;
+        broadcast_addr.s_addr |= wildcard_addr.s_addr;
+
+        min_addr = network_addr;
+        max_addr = broadcast_addr;
+
+        if (network_addr.s_addr != broadcast_addr.s_addr) {
+            min_addr.s_addr = htonl(ntohl(min_addr.s_addr) + 1);
+            max_addr.s_addr = htonl(ntohl(max_addr.s_addr) - 1);
+        }
+
+        *addr = min_addr;
+        *num_hosts = (int64_t)ntohl(broadcast_addr.s_addr) - ntohl(network_addr.s_addr) + 1;
+    }
+
 
     if (argc <= 2) {
         // port range not specified
