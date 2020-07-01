@@ -6,11 +6,6 @@
 #define SITE_ROOT "/var/www/mywww"
 #define DEFAULT_DOC "index.html"
 #define ERR_EMULATION 1
-// #define DOC_404 "404.html"
-// #define DOC_405 "405.html"
-// #define DOC_418 "418.html"
-// #define DOC_505 "505.html"
-
 
 enum Method 
 {
